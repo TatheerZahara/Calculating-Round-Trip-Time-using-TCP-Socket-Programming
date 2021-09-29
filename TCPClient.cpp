@@ -6,47 +6,67 @@
 #include<time.h>
 
 int main() {
-           int start=clock();
-	const char* server_name = "localhost";
-	const int server_port = 8877;
+       
+const char* server_name = "127.0.0.1";
+const int server_port = 8877;
 
-	struct sockaddr_in server_address;
-	memset(&server_address, 0, sizeof(server_address));
-	server_address.sin_family = AF_INET;
+struct sockaddr_in server_address;
+memset(&server_address, 0, sizeof(server_address));
+server_address.sin_family = AF_INET;
 
-	// creates binary representation of server name
-	// and stores it as sin_addr
-	inet_pton(AF_INET, server_name, &server_address.sin_addr);
+// creates binary representation of server name
+// and stores it as sin_addr
+// http://beej.us/guide/bgnet/output/html/multipage/inet_ntopman.html
+inet_pton(AF_INET, server_name, &server_address.sin_addr);
 
-	// htons: port in network order format
-	server_address.sin_port = htons(server_port);
+// htons: port in network order format
+server_address.sin_port = htons(server_port);
 
-	// open socket
-	int sock;
-	if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
-		printf("could not create socket\n");
-		return 1;
-	}
+// open a stream socket
+int sock;
+        int start=clock();
 
-	// data that will be sent to the server
-	const char* data_to_send = " Hi BSCS 7";
+if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
+printf("could not create socket\n");
+return 1;
+}
 
-	// send data
-	int len =
-	    sendto(sock, data_to_send, strlen(data_to_send), 0,
-	           (struct sockaddr*)&server_address, sizeof(server_address));
+// TCP is connection oriented, a reliable connection
+// **must** be established before any data is exchanged
+if (connect(sock, (struct sockaddr*)&server_address,
+           sizeof(server_address)) < 0) {
+printf("could not connect to server\n");
+return 1;
+}
 
-	// received echoed data back
-	char buffer[100];
-	recvfrom(sock, buffer, len, 0, NULL, NULL);
+// send
 
-	buffer[len] = '\0';
-	printf("recieved: '%s'\n", buffer);
-int end1=clock();          
-int TT=end1-start;
-printf(“TT  is: %d”,TT);
+// data that will be sent to the server
+const char* data_to_send = "Gangadhar Hi Shaktimaan hai";
+send(sock, data_to_send, strlen(data_to_send), 0);
 
-	// close the socket
-	close(sock);
-	return 0;
+// receive
+
+int n = 0;
+int len = 0, maxlen = 100;
+char buffer[maxlen];
+char* pbuffer = buffer;
+
+// will remain open until the server terminates the connection
+while ((n = recv(sock, pbuffer, maxlen, 0)) > 0) {
+pbuffer += n;
+maxlen -= n;
+len += n;
+
+buffer[len] = '\0';
+printf("received: '%s'\n", buffer);
+}
+        int end=clock();
+       
+        int TT=end-start;
+        printf("\n RTT:%d",TT);
+
+// close the socket
+close(sock);
+return 0;
 }
